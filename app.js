@@ -6,8 +6,12 @@ process.env.DEBUG = 'actions-on-google:*';
 let Assistant = require('actions-on-google').ApiAiAssistant;
 let express = require('express');
 let bodyParser = require('body-parser');
-let FEN = require('chesslib').FEN;
-let playMove = require('./playMove');
+
+let chessLib = require('chesslib');
+let FEN = chessLib.FEN;
+let Position = chessLib.Position
+
+let moveUtil = require('./moveUtil');
 
 let app = express();
 app.set('port', (process.env.PORT || 8080));
@@ -43,16 +47,23 @@ app.post('/', function (request, response) {
 
 
   function letsPlayIntent(assistant) {
-    //TODO: Start game against computer, save info in db
     console.log("OREO: Inside LetsPlayIntent. TODO: Game started and id's saved");
 
     let side = assistant.getArgument(SIDE_ARGUMENT);
 
+    //TODO: Handle case where user already has a game started.
+    //TODO: Pass in userId
+    let pos = initNewGame();
+
     if(side == 'white') {
       assistant.ask("Ok, you are white. What is your first move?");
     } else {
-      //TODO: Start game
-      assistant.ask("Ok, you are black. My first move is E 4");
+      let bestMove = moveUtil.calcBestMove(pos);
+      pos = playMove(pos, bestMove);
+
+      //TODO: Save new board state to db
+
+      assistant.ask("Ok, you are black. My first move is " + bestMove);
     }
   }
   
@@ -66,7 +77,7 @@ app.post('/', function (request, response) {
 
     var pos = FEN.parse("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-    var bestMove = playMove(pos, "e4");
+    var bestMove = moveUtil.playMove(pos, "e4");
 
     bestMove.then(function(bestmove) {
       console.log("In the resolution of bestMove. Best move: ", bestmove);
@@ -74,29 +85,13 @@ app.post('/', function (request, response) {
     });
   }
 
-  /*
-  function mainIntent (assistant) {
-    let inputPrompt = assistant.buildInputPrompt(true,
-          '<speak>Hi! Would you like to play as black or white' +
-          'I can read out an ordinal like ' +
-          '<say-as interpret-as="ordinal">123</say-as>. Say a number.</speak>',
-          ['I didn\'t hear a number', 'If you\'re still there, what\'s the number?', 'What is the number?']);
-    assistant.ask(inputPrompt);
-  }
+  function initNewGame(userId) {
+    var pos = new Position();
 
-  function rawInput (assistant) {
-    console.log('rawInput');
-    if (assistant.getRawInput() === 'bye') {
-      assistant.tell('Goodbye!');
-    } else {
-      let inputPrompt = assistant.buildInputPrompt(true, '<speak>You said, <say-as interpret-as="ordinal">' +
-        assistant.getRawInput() + '</say-as></speak>',
-          ['I didn\'t hear a number', 'If you\'re still there, what\'s the number?', 'What is the number?']);
-      assistant.ask(inputPrompt);
-    }
+    //TODO: Store position in db
+    
+    return pos;
   }
-  */
-
 });
 
 // Start the server

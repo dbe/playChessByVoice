@@ -6,12 +6,12 @@ const URL = "mongodb://localhost:27017/chessByVoice-" + ENV;
 const GAMES_COLLECTION = 'games';
 
 
-function persistPosition(pos, userId) {
+function persistGame(game, userId) {
 
   MongoClient.connect(URL, function(err, db) {
     var collection = db.collection(GAMES_COLLECTION);
 
-    collection.update({user_id: userId}, {user_id: userId, fen: FEN.stringify(pos)}, {upsert: true}, function(err, result) {
+    collection.update({user_id: userId}, {user_id: userId, fen: game.fen()}, {upsert: true}, function(err, result) {
       console.log("Updated the db");
 
       db.close();
@@ -19,7 +19,7 @@ function persistPosition(pos, userId) {
   });
 }
 
-function getGamePosition(userId) {
+function getGame(userId) {
   var deferred = Q.defer();
 
   MongoClient.connect(URL, function(err, db) {
@@ -29,7 +29,7 @@ function getGamePosition(userId) {
       if(err) {
         deferred.reject();
       } else {
-        console.log("Just got the result of getGamePosition: ", result);
+        console.log("Just got the result of getGame: ", result);
         deferred.resolve(result);
       }
     });
@@ -39,7 +39,7 @@ function getGamePosition(userId) {
 }
 
 module.exports = {
-  persistPosition:  persistPosition,
-  getGamePosition: getGamePosition
+  persistGame:  persistGame,
+  getGame: getGame
 }
 

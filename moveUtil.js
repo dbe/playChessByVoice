@@ -3,47 +3,34 @@ const STOCK_PATH = "/Users/dbe/Stockfish/src/stockfish";
 
 var Q = require('q');
 var UCI = require('uci');
-var chessLib = require('chesslib');
-var FEN = chessLib.FEN;
 
 //Given a position, calculate the best move using Stockfish
 //Returns a deffered variable
-function calcBestMove(initialPos) {
-  console.log("In calcBestMove");
-
+function calcBestMove(game) {
   var engine = new UCI(STOCK_PATH);
   var deferred = Q.defer();
 
   engine.runProcess().then(function () {
-    console.log('Started');
     return engine.uciCommand();
 
   }).then(function (idAndOptions) {
-    console.log('Engine name - ' + idAndOptions.id.name);
     return engine.isReadyCommand();
 
   }).then(function () {
-    console.log('Ready');
     return engine.uciNewGameCommand();
 
   }).then(function () {
-    console.log('New game started');
-    return engine.positionCommand(FEN.stringify(initialPos));
+    return engine.positionCommand(game.fen());
 
   }).then(function () {
-    console.log('Starting position set');
-    console.log('Starting analysis');
     return engine.goInfiniteCommand(console.log);
 
   }).delay(500).then(function () {
-    console.log('Stopping analysis');
     return engine.stopCommand();
 
-  }).then(function (bestmove) {
-    console.log('Bestmove: ');
-    let alg = bestMoveToAlgebraic(bestmove);
-
-    deferred.resolve(alg);
+  }).then(function (bestMove) {
+    //TODO: Maybe need to translate this to a correct {to, from} dictionary. Maybe not
+    deferred.resolve(bestMove);
 
     return engine.quitCommand();
 
@@ -58,12 +45,20 @@ function calcBestMove(initialPos) {
   return deferred.promise;
 }
 
-//Takes a UCI "bestmove" object and returns an algebraic notation string
-function bestMoveToAlgebraic(move) {
-  //TODO: Actually do this translateion
-  return move;
+
+const PIECE_TO_SPEECH = {
+  'p' : 'pawn',
+  'r' : 'rook',
+  'n' : 'knight',
+  'b' : 'bishop',
+  'q' : 'queen',
+  'k' : 'king'
+}
+
+function moveToSpeech(move) {
+  return `${PIECE_TO_SPEECH[move.piece]} from ${move.from} to ${move.to}`;
 }
 
 
-module.exports.playMove = playMove;
-odule.exports.calcBestMove = calcBestMove;
+module.exports.calcBestMove = calcBestMove;
+module.exports.moveToSpeech = moveToSpeech;

@@ -56,7 +56,7 @@ app.post('/', function (request, response) {
     if(side == 'white') {
       assistant.ask("Ok, you are white. What is your first move?");
     } else {
-      moveUtil.calcBestMove(game).then(bestMove) {
+      moveUtil.calcBestMove(game).then(function(bestMove) {
         var move = game.move(bestMove);
 
         //TODO: Handle case where move is null due to bad move
@@ -65,7 +65,7 @@ app.post('/', function (request, response) {
         }
 
         assistant.ask("Ok, you are black. My first move is " + moveUtil.moveToSpeech(move));
-      }
+      });
     }
 
     //TODO: Careful here to make sure this happens even after the assisntant.ask
@@ -80,15 +80,26 @@ app.post('/', function (request, response) {
   function playMoveIntent(assistant) {
     var userId = extractUserId(assistant);
 
-    Persistance.getGame(userId).then(function(game) {
+    Persistance.getGame(userId).then(function(gameData) {
+      console.log("Loaded game from db");
+
       var desiredMove = extractDesiredMove(assistant);
+      console.log("desiredMove: ", desiredMove);
+
+      var game = new Chess(gameData.fen);
+
+      console.log("Game: ", game);
 
       var move = game.move(desiredMove);
 
-      assistant.ask("Ok, you moved: " + moveUtil.moveToSpeech(move));
+      console.log("Made move: ", move);
+
       //TODO: Handle calcing the best move and making it
 
+      console.log("About to persist updated game");
       Persistance.persistGame(game, userId);
+
+      assistant.ask("Ok, you moved: " + moveUtil.moveToSpeech(move));
     });
   }
 

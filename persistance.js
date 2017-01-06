@@ -23,7 +23,7 @@ function getGame(userId) {
   var deferred = Q.defer();
 
   MongoClient.connect(URL, function(err, db) {
-    var collection = db[GAMES_COLLECTION];
+    var collection = db.collection(GAMES_COLLECTION);
 
     collection.findOne({user_id: userId}, function(err, result) {
       if(err) {
@@ -35,7 +35,7 @@ function getGame(userId) {
     });
   });
 
-  return deferred;
+  return deferred.promise;
 }
 
 module.exports = {

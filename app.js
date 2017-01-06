@@ -81,25 +81,32 @@ app.post('/', function (request, response) {
     var userId = extractUserId(assistant);
 
     Persistance.getGame(userId).then(function(gameData) {
-      console.log("Loaded game from db");
-
       var desiredMove = extractDesiredMove(assistant);
-      console.log("desiredMove: ", desiredMove);
-
       var game = new Chess(gameData.fen);
+      var humanMove = game.move(desiredMove);
 
-      console.log("Game: ", game);
+      //TODO: Improve this UX
+      if(humanMove == null) {
+        assistant.ask("That move is illegal. Try again");
+      }
 
-      var move = game.move(desiredMove);
+      console.log("Human made move: ", moveUtil.moveToSpeech(humanMove));
 
-      console.log("Made move: ", move);
+      moveUtil.calcBestMove(game).then(function(bestMove) {
+        console.log("Got best Move: ", bestMove);
 
-      //TODO: Handle calcing the best move and making it
+        var computerMove = game.move(bestMove);
 
-      console.log("About to persist updated game");
-      Persistance.persistGame(game, userId);
+        console.log("computerMove: ", computerMove);
 
-      assistant.ask("Ok, you moved: " + moveUtil.moveToSpeech(move));
+        console.log("About to persist");
+
+        Persistance.persistGame(game, userId);
+
+        console.log("After persist, about to ask user");
+
+        assistant.ask("Ok, you moved: " + moveUtil.moveToSpeech(humanMove) + ". My move is: " + moveUtil.moveToSpeech(computerMove));
+      });
     });
   }
 

@@ -29,6 +29,18 @@ const RANK_ARGUMENT = 'rank';
 const DISAMBIGUATION_FILE_ARGUMENT = 'disambiguation_file';
 const DISAMBIGUATION_RANK_ARGUMENT = 'disambiguation_rank';
 
+const EXTRACTABLE_ARGS = [DISAMBIGUATION_FILE_ARGUMENT, DISAMBIGUATION_RANK_ARGUMENT, PIECE_ARGUMENT, FILE_ARGUMENT, RANK_ARGUMENT];
+
+//TODO: Extract this another file
+const PIECE_TO_ALGEBRAIC = {
+  'Rook': 'R',
+  'Knight': 'N',
+  'Bishop': 'B',
+  'King': 'K',
+  'Queen': 'Q',
+  'Pawn': ''
+};
+
 //Constants
 const STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -50,27 +62,20 @@ app.post('/', function (request, response) {
   //TODO: Handle case where user already has a game started.
   function letsPlayIntent(assistant) {
     var side = assistant.getArgument(SIDE_ARGUMENT);
-    var game = initNewGame();
+    var game = new Chess();
     var userId = extractUserId(assistant);
 
     if(side == 'white') {
+      Persistance.persistGame(game, userId);
       assistant.ask("Ok, you are white. What is your first move?");
     } else {
       moveUtil.calcBestMove(game).then(function(bestMove) {
         var move = game.move(bestMove);
-
-        //TODO: Handle case where move is null due to bad move
-        if(move == null) {
-          console.log("ERROR! MOVE WAS NULL");
-        }
+        Persistance.persistGame(game, userId);
 
         assistant.ask("Ok, you are black. My first move is " + moveUtil.moveToSpeech(move));
       });
     }
-
-    //TODO: Careful here to make sure this happens even after the assisntant.ask
-    console.log("Saving to DB");
-    Persistance.persistGame(game, userId);
   }
   
   function resignIntent(assistant) {
@@ -90,20 +95,9 @@ app.post('/', function (request, response) {
         assistant.ask("That move is illegal. Try again");
       }
 
-      console.log("Human made move: ", moveUtil.moveToSpeech(humanMove));
-
       moveUtil.calcBestMove(game).then(function(bestMove) {
-        console.log("Got best Move: ", bestMove);
-
         var computerMove = game.move(bestMove);
-
-        console.log("computerMove: ", computerMove);
-
-        console.log("About to persist");
-
         Persistance.persistGame(game, userId);
-
-        console.log("After persist, about to ask user");
 
         assistant.ask("Ok, you moved: " + moveUtil.moveToSpeech(humanMove) + ". My move is: " + moveUtil.moveToSpeech(computerMove));
       });
@@ -116,14 +110,31 @@ app.post('/', function (request, response) {
   }
 
   function extractDesiredMove(assistant) {
-    //TODO: Make this acutally parse the desired move
-    return 'e4';
-  }
 
-  function initNewGame() {
-    return new Chess();
-  }
+    return extractAndAppendArgs(EXTRACTABLE_ARGS);
 
+    // --- Private functions just for this method ---//
+    function extractAndAppendArgs(args) {
+      var move = '';
+
+      for(var i in args) {
+        move += extractArg(args[i]);
+      }
+
+      return move;
+    }
+    
+    function extractArg(arg) {
+      var value = assistant.getArgument(arg);
+
+      if(arg == PIECE_ARGUMENT && value != undefined) {
+        value = PIECE_TO_ALGEBRAIC[value];
+      }
+
+      return value ? value : '';
+    }
+  }
+  //--- End Private functions ---//
 });
 
 // Start the server

@@ -6,20 +6,6 @@ var UCI = require('uci');
 var chessLib = require('chesslib');
 var FEN = chessLib.FEN;
 
-//initialPosition is a chessLib.Position
-//desiredMove is a string in algebraic notation
-//If the move is illegal, the function will throw an Error of the associated type //TODO: Describe the exact errors here in more detail
-function playMove(initialPosition, desiredMove) {
-  console.log("Postion before: ", FEN.stringify(initialPosition));
-
-  //This throws errors if the move is illegal
-  var pos = initialPosition.move(desiredMove);
-
-  console.log("Position after playing desired move: ", FEN.stringify(pos));
-
-  return pos;
-}
-
 //Given a position, calculate the best move using Stockfish
 //Returns a deffered variable
 function calcBestMove(initialPos) {
@@ -80,4 +66,4 @@ function bestMoveToAlgebraic(move) {
 
 
 module.exports.playMove = playMove;
-module.exports.calcBestMove = calcBestMove;
+odule.exports.calcBestMove = calcBestMove;

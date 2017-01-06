@@ -12,6 +12,7 @@ let FEN = chessLib.FEN;
 let Position = chessLib.Position
 
 let moveUtil = require('./moveUtil');
+let Persistance = require('./persistance');
 
 let app = express();
 app.set('port', (process.env.PORT || 8080));
@@ -31,6 +32,9 @@ const RANK_ARGUMENT = 'rank';
 const DISAMBIGUATION_FILE_ARGUMENT = 'disambiguation_file';
 const DISAMBIGUATION_RANK_ARGUMENT = 'disambiguation_rank';
 
+//Constants
+const STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
 app.get('/', function(request, response) {
   response.send("Homepage of the Play Chess By Voice program.");
 });
@@ -46,14 +50,11 @@ app.post('/', function (request, response) {
   assistant.handleRequest(actionMap);
 
 
+  //TODO: Handle case where user already has a game started.
   function letsPlayIntent(assistant) {
-    console.log("OREO: Inside LetsPlayIntent. TODO: Game started and id's saved");
-
     let side = assistant.getArgument(SIDE_ARGUMENT);
-
-    //TODO: Handle case where user already has a game started.
-    //TODO: Pass in userId
     let pos = initNewGame();
+    let userId = extractUserId(assistant);
 
     if(side == 'white') {
       assistant.ask("Ok, you are white. What is your first move?");
@@ -61,10 +62,12 @@ app.post('/', function (request, response) {
       let bestMove = moveUtil.calcBestMove(pos);
       pos = playMove(pos, bestMove);
 
-      //TODO: Save new board state to db
-
       assistant.ask("Ok, you are black. My first move is " + bestMove);
     }
+
+    //TODO: Careful here to make sure this happens even after the assisntant.ask
+    console.log("Saving to DB");
+    Persistance.persistPosition(pos, userId);
   }
   
   function resignIntent(assistant) {
@@ -74,24 +77,33 @@ app.post('/', function (request, response) {
 
   function playMoveIntent(assistant) {
     console.log("OREO: Inside playMoveIntent");
+    var userId = extractUserId(assistant);
 
-    var pos = FEN.parse("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    getGamePosition(userId).then(function(pos) {
+      var desiredMove = extractDesiredMove(assistant);
 
-    var bestMove = moveUtil.playMove(pos, "e4");
-
-    bestMove.then(function(bestmove) {
-      console.log("In the resolution of bestMove. Best move: ", bestmove);
-      assistant.ask("Ok I play " + bestMove);
+      pos = pos.playMove(desiredMove);
     });
   }
 
-  function initNewGame(userId) {
-    var pos = new Position();
-
-    //TODO: Store position in db
-    
-    return pos;
+  //TODO: Acutally get the user ID
+  function extractUserId(assisant) {
+    return 1;
   }
+
+  function extractDesiredMove(assistant) {
+    //TODO: Make this acutally parse the desired move
+    return 'e4';
+  }
+
+  function getGamePosition(userId) {
+    return Persistance.getGamePosition(userId);
+  }
+
+  function initNewGame(userId) {
+    return FEN.parse(STARTING_FEN);
+  }
+
 });
 
 // Start the server

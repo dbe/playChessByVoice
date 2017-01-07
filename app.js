@@ -28,8 +28,9 @@ const FILE_ARGUMENT = 'file';
 const RANK_ARGUMENT = 'rank';
 const DISAMBIGUATION_FILE_ARGUMENT = 'disambiguation_file';
 const DISAMBIGUATION_RANK_ARGUMENT = 'disambiguation_rank';
+const TAKES_ARGUMENT = 'takes';
 
-const EXTRACTABLE_ARGS = [DISAMBIGUATION_FILE_ARGUMENT, DISAMBIGUATION_RANK_ARGUMENT, PIECE_ARGUMENT, FILE_ARGUMENT, RANK_ARGUMENT];
+const EXTRACTABLE_ARGS = [PIECE_ARGUMENT, DISAMBIGUATION_FILE_ARGUMENT, DISAMBIGUATION_RANK_ARGUMENT, TAKES_ARGUMENT, FILE_ARGUMENT, RANK_ARGUMENT];
 
 //TODO: Extract this another file
 const PIECE_TO_ALGEBRAIC = {
@@ -87,19 +88,23 @@ app.post('/', function (request, response) {
 
     Persistance.getGame(userId).then(function(gameData) {
       var desiredMove = extractDesiredMove(assistant);
+      console.log("OREO: desiredMove: ", desiredMove);
+
       var game = new Chess(gameData.fen);
       var humanMove = game.move(desiredMove);
 
+      console.log("OREO: humanMove: ", humanMove);
+
       //TODO: Improve this UX
       if(humanMove == null) {
-        assistant.ask("That move is illegal. Try again");
+        return assistant.ask("That move is illegal. Try again");
       }
 
       moveUtil.calcBestMove(game).then(function(bestMove) {
         var computerMove = game.move(bestMove);
         Persistance.persistGame(game, userId);
 
-        assistant.ask("Ok, you moved: " + moveUtil.moveToSpeech(humanMove) + ". My move is: " + moveUtil.moveToSpeech(computerMove));
+        return assistant.ask("Ok, you moved: " + moveUtil.moveToSpeech(humanMove) + ". My move is: " + moveUtil.moveToSpeech(computerMove));
       });
     });
   }
@@ -129,6 +134,10 @@ app.post('/', function (request, response) {
 
       if(arg == PIECE_ARGUMENT && value != undefined) {
         value = PIECE_TO_ALGEBRAIC[value];
+      } else if(arg == TAKES_ARGUMENT) {
+        if(value) {
+          value = 'x';
+        }
       }
 
       return value ? value : '';
